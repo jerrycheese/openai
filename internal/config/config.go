@@ -34,15 +34,19 @@ var (
 		Timeout      int
 		SubscribeMsg string
 	}
-	// User struct {
-	// 	QueryTimesDaily int64
-	// }
+
+	User struct {
+		UnlimitedUid    []string
+		UnlimitedUidMap map[string]bool
+		DailyQueryTimes int32
+	}
 )
 
 func init() {
 
 	// 读取配置
-	viper.SetConfigFile("./config.yaml")
+	configPath := getConfigPath()
+	viper.SetConfigFile(configPath)
 	viper.SetConfigType("yaml")
 
 	err := viper.ReadInConfig()
@@ -55,7 +59,8 @@ func init() {
 	viper.UnmarshalKey("http", &Http)
 	viper.UnmarshalKey("openai", &OpenAI)
 	viper.UnmarshalKey("wechat", &Wechat)
-	// viper.UnmarshalKey("user", &User)
+	viper.UnmarshalKey("user", &User)
+	User.UnlimitedUidMap = stringSliceToMap(User.UnlimitedUid)
 
 	if OpenAI.Key == "" {
 		fmt.Println("OpenAI的Key不能为空")
@@ -71,4 +76,19 @@ func init() {
 	}
 
 	fmt.Println(OpenAI.Params)
+}
+
+func getConfigPath() string {
+	if v := os.Getenv("CONF"); len(v) > 0 {
+		return v
+	}
+	return "./config.yaml"
+}
+
+func stringSliceToMap(s []string) map[string]bool {
+	v := make(map[string]bool, len(s))
+	for _, vv := range s {
+		v[vv] = true
+	}
+	return v
 }

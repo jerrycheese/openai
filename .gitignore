@@ -1,5 +1,8 @@
 .vscode
 .DS_Store
-build.sh
+./build.sh
 log/*
-test.html
+./test.html
+config_prod.yaml
+output/
+openapiBin

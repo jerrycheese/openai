@@ -34,4 +34,9 @@ wechat:
   subscribeMsg: 你好，我是基于ChatGPT的AI助手，有什么能帮助您的吗？
 
 
+user:
+  unlimitedUid:
+    # - oduEg5qP3k16J6wiTQkDvfVCYcnQ # UID
+    # - oduEg5rSalxy915K0XCklTL2HbZ0 # UID
+  dailyQueryTimes: 1
 

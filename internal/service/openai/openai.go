@@ -6,11 +6,13 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"log"
 	"net/http"
 	"net/url"
 	"openai/internal/config"
+	"openai/internal/service/limiter"
 	"runtime"
 	"strings"
 	"sync"
@@ -34,7 +36,8 @@ type user struct {
 }
 
 var (
-	userCache sync.Map
+	userCache       sync.Map
+	userCallLimiter *limiter.CallLimit = limiter.NewCallLimit(config.User.DailyQueryTimes)
 )
 
 func Query(uid string, msg string, timeout time.Duration) (reply string) {
@@ -53,8 +56,8 @@ func Query(uid string, msg string, timeout time.Duration) (reply string) {
 	msg = strings.TrimSpace(msg)
 	length := len([]rune(msg))
 
-	if length <= 1 {
-		reply = "请说详细些..."
+	if length < 2 {
+		reply = "请说详细些...至少两个字符"
 		return
 	}
 	if length > config.OpenAI.MaxQuestionLength {
@@ -80,6 +83,11 @@ func Query(uid string, msg string, timeout time.Duration) (reply string) {
 	defer func() {
 		u.question.doing = false
 	}()
+
+	if err := checkUserCallLimit(uid); err != nil {
+		reply = err.Error()
+		return
+	}
 
 	if msg != "继续" {
 		// ++后，answer自动停止
@@ -148,6 +156,21 @@ func Query(uid string, msg string, timeout time.Duration) (reply string) {
 	reply = string(runes)
 
 	return
+}
+
+func checkUserCallLimit(uid string) error {
+	if uid == "0" {
+		return nil
+	}
+	_, unlimited := config.User.UnlimitedUidMap[uid]
+	if unlimited {
+		return nil
+	}
+	if userCallLimiter.Add(uid) {
+		return nil
+	}
+	return fmt.Errorf("用户今日访问次数已达上限 %d/%d",
+		config.User.DailyQueryTimes, config.User.DailyQueryTimes)
 }
 
 // https://beta.openai.com/docs/api-reference/making-requests
